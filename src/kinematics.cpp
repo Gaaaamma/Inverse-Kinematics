@@ -97,7 +97,7 @@ Eigen::VectorXf leastSquareSolver(const Eigen::Matrix3Xf& jacobian, const Eigen:
   Matrix3Xf S = svd.singularValues().asDiagonal();
   
   // psudo inverse J+ = V * Summation+ * U.transpose()
-  Matrix3Xf JPlus = V * S.inverse() * U.transpose();
+  MatrixX3f JPlus = V * S.inverse() * U.transpose();
   
   Eigen::VectorXf solution(jacobian.cols());
   solution.setZero();
