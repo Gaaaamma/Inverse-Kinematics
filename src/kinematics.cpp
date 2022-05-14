@@ -2,8 +2,16 @@
 
 #include <algorithm>
 #include <stack>
+#include <Eigen/SVD>  
+#include <Eigen/Dense>
 
 #include "utils.h"
+
+//using Eigen::MatrixXf;    
+using namespace Eigen;    
+using namespace Eigen::internal;    
+using namespace Eigen::Architecture;  
+
 void forwardKinematics(const Posture& posture, Bone* bone) {
   // TODO (FK)
   // Same as HW2, but have some minor change
@@ -81,8 +89,18 @@ Eigen::VectorXf leastSquareSolver(const Eigen::Matrix3Xf& jacobian, const Eigen:
   // Note:
   //   1. SVD or other pseudo-inverse method is useful
   //   2. Some of them have some limitation, if you use that method you should check it.
+
+  JacobiSVD<MatrixXf> svd(jacobian, ComputeThinU | ComputeThinV);
+  Matrix3f U = svd.matrixU(); 
+  MatrixXf V = svd.matrixV();
+  Matrix3Xf S = U.inverse() * jacobian * V.transpose().inverse();
+
+  // psudo inverse J+ = V * Summation+ * U.transpose()
+  MatrixX3f JPlus = V * S.transpose() * U.transpose();
+
   Eigen::VectorXf solution(jacobian.cols());
   solution.setZero();
+  solution = JPlus * target;
   return solution;
 }
 
