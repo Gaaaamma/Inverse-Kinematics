@@ -1,5 +1,6 @@
 #include "kinematics.h"
 
+#include <iostream>
 #include <algorithm>
 #include <stack>
 #include <Eigen/SVD>  
@@ -89,18 +90,30 @@ Eigen::VectorXf leastSquareSolver(const Eigen::Matrix3Xf& jacobian, const Eigen:
   // Note:
   //   1. SVD or other pseudo-inverse method is useful
   //   2. Some of them have some limitation, if you use that method you should check it.
-
+  std::cout << "leastSquareSolver is called\n";
   JacobiSVD<MatrixXf> svd(jacobian, ComputeThinU | ComputeThinV);
-  Matrix3f U = svd.matrixU(); 
+  std::cout << "leastSquareSolver p1\n";
+
+  Matrix3f U = svd.matrixU();
+  std::cout << "leastSquareSolver p2\n";
+
   MatrixXf V = svd.matrixV();
+  std::cout << "leastSquareSolver p3\n";
+
   Matrix3Xf S = U.inverse() * jacobian * V.transpose().inverse();
+  std::cout << "leastSquareSolver p4\n";
 
   // psudo inverse J+ = V * Summation+ * U.transpose()
   MatrixX3f JPlus = V * S.transpose() * U.transpose();
+  std::cout << "leastSquareSolver p5\n";
 
   Eigen::VectorXf solution(jacobian.cols());
   solution.setZero();
+  std::cout << "leastSquareSolver p6\n";
+
   solution = JPlus * target;
+  std::cout << "leastSquareSolver p7\n";
+
   return solution;
 }
 
@@ -119,10 +132,22 @@ void inverseKinematics(const Eigen::Vector3f& target, Bone* start, Bone* end, Po
   //   1. Both start and end should be in the list
 
   // Write your code here.
+  Bone* traverser = end;
+  while (traverser->idx != start->idx && traverser->idx != root->idx) {
+    // while will stop when traverser is on startBone or rootBone
+    boneList.push_back(traverser);
+    // traverse its parent
+    traverser = traverser->parent;
+  }
+  // startBone or rootBone also need to push to boneList
+  boneList.push_back(traverser);
 
   size_t boneNum = boneList.size();
   Eigen::Matrix3Xf jacobian(3, 3 * boneNum);
   jacobian.setZero();
+  Eigen::Vector3f xUnit = Eigen::Vector3f(1, 0, 0);
+  Eigen::Vector3f yUnit = Eigen::Vector3f(0, 1, 0);
+  Eigen::Vector3f zUnit = Eigen::Vector3f(0, 0, 1);
 
   for (int i = 0; i < maxIterations; ++i) {
     forwardKinematics(posture, root);
@@ -135,7 +160,15 @@ void inverseKinematics(const Eigen::Vector3f& target, Bone* start, Bone* end, Po
     //   3. Call leastSquareSolver to compute dTheta
 
     // Write your code here.
-
+    
+    for (int i = 0; i < boneNum; i++) {
+      jacobian.col(i * 3) = (boneList[i]->rotation * xUnit).cross(end->endPosition - boneList[i]->startPosition);
+      jacobian.col(i * 3 + 1) = (boneList[i]->rotation * yUnit).cross(end->endPosition - boneList[i]->startPosition);
+      jacobian.col(i * 3 + 2) = (boneList[i]->rotation * zUnit).cross(end->endPosition - boneList[i]->startPosition);
+    }
+    
+    Eigen::VectorXf dTheta = leastSquareSolver(jacobian,target - end->endPosition);
+    std::cout << "dTheta is end\n";
     for (size_t j = 0; j < boneNum; j++) {
       const auto& bone = *boneList[j];
       // TODO (update rotation)
