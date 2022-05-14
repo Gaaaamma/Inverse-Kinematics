@@ -1,6 +1,7 @@
 #include "kinematics.h"
 
 #include <algorithm>
+#include <stack>
 
 #include "utils.h"
 void forwardKinematics(const Posture& posture, Bone* bone) {
@@ -10,6 +11,66 @@ void forwardKinematics(const Posture& posture, Bone* bone) {
   //   1. If you don't use `axis` in this function, you can copy-paste your code
   // Note:
   //   1. bone.axis becomes quaternion instead of vector3f
+
+  std::stack<Bone*> traverseStack;
+  traverseStack.push(bone);
+  int alreadyTraverse[31] = {};
+  while (!traverseStack.empty()) {
+    if (traverseStack.top()->child != nullptr && alreadyTraverse[traverseStack.top()->child->idx] == 0) {
+      if(alreadyTraverse[traverseStack.top()->idx] ==0){
+        // Since we need to modify parent first
+        alreadyTraverse[traverseStack.top()->idx] = 1;
+        //std::cout << "Traverse: " << traverseStack.top()->idx << "\n";
+        // 2. Read local coordinate data from posture first
+        Eigen::Quaternionf localRotation = posture.rotations[traverseStack.top()->idx];
+        Eigen::Vector3f localTranslation = posture.translations[traverseStack.top()->idx];
+
+        // 3. Set 3 variable value
+        // bone->rotation ;
+        // bone->startPosition ;
+        // bone->endPosition ;
+        if(traverseStack.top()->parent == nullptr){
+          // root
+          traverseStack.top()->startPosition =localTranslation;
+          traverseStack.top()->endPosition = traverseStack.top()->startPosition;
+          traverseStack.top()->rotation = localRotation;
+        }else{
+          // not root
+          traverseStack.top()->rotation = traverseStack.top()->parent->rotation * traverseStack.top()->rotationParentCurrent * localRotation;
+          traverseStack.top()->startPosition =traverseStack.top()->parent->endPosition ;
+          traverseStack.top()->endPosition =
+            traverseStack.top()->startPosition +(traverseStack.top()->rotation * traverseStack.top()->direction * traverseStack.top()->length);
+        }
+      }
+      traverseStack.push(traverseStack.top()->child);
+    } else {
+      // No child or Already check its child -> Check itself.
+      if (alreadyTraverse[traverseStack.top()->idx] == 0) {
+        alreadyTraverse[traverseStack.top()->idx] = 1;
+        //std::cout << "Traverse: " << traverseStack.top()->idx << "\n";
+        // 2. Read local coordinate data from posture first
+        Eigen::Quaternionf localRotation = posture.rotations[traverseStack.top()->idx];
+        Eigen::Vector3f localTranslation = posture.translations[traverseStack.top()->idx];
+
+        // 3. Modify 3 variable value
+        // bone->rotation ;
+        // bone->startPosition ;
+        // bone->endPosition ;
+        traverseStack.top()->rotation = traverseStack.top()->parent->rotation * traverseStack.top()->rotationParentCurrent * localRotation;
+        traverseStack.top()->startPosition =traverseStack.top()->parent->endPosition ;
+        traverseStack.top()->endPosition = 
+          traverseStack.top()->startPosition +(traverseStack.top()->rotation* traverseStack.top()->direction * traverseStack.top()->length );
+      }
+
+      // Check sibling
+      if (traverseStack.top()->sibling != nullptr && alreadyTraverse[traverseStack.top()->sibling->idx] == 0) {
+        traverseStack.push(traverseStack.top()->sibling);
+      } else {
+        traverseStack.pop();
+      }
+
+    }
+  }
 }
 
 Eigen::VectorXf leastSquareSolver(const Eigen::Matrix3Xf& jacobian, const Eigen::Vector3f& target) {
