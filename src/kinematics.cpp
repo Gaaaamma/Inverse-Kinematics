@@ -112,7 +112,6 @@ void inverseKinematics(const Eigen::Vector3f& target, Bone* start, Bone* end, Po
   // Since bone stores in bones[i] that i == bone->idx, we can use bone - bone->idx to find bones[0] which is root.
   Bone* root = start - start->idx;
   std::vector<Bone*> boneList;
-  std::vector<Bone*> tempList;
   // TODO
   // Hint:
   //   1. Traverse from end to start is easier than start to end (since there is only 1 parent)
@@ -124,18 +123,12 @@ void inverseKinematics(const Eigen::Vector3f& target, Bone* start, Bone* end, Po
   Bone* traverser = end;
   while (traverser->idx != start->idx && traverser->idx != root->idx) {
     // while will stop when traverser is on startBone or rootBone
-    tempList.push_back(traverser);
+    boneList.push_back(traverser);
     // traverse its parent
     traverser = traverser->parent;
   }
   // startBone or rootBone also need to push to boneList
-  tempList.push_back(traverser);
-
-  // Reverse tempList to get from start -> end
-  for (int i = tempList.size() - 1; i >= 0; i--) {
-    boneList.push_back(tempList[i]);
-  }
-  tempList.clear();
+  boneList.push_back(traverser);
   
   size_t boneNum = boneList.size();
   Eigen::Matrix3Xf jacobian(3, 3 * boneNum);
@@ -167,7 +160,14 @@ void inverseKinematics(const Eigen::Vector3f& target, Bone* start, Bone* end, Po
     }
     
     Eigen::VectorXf dTheta = leastSquareSolver(jacobian,target - end->endPosition);
-    
+    std::cout << "dTheta.size():" << dTheta.size() << "\n";
+    /*
+    for(int i=0;i<dTheta.size();i++){
+      std::cout << "dTheta[" << i << "] = " << dTheta[i] << "\n";
+    }
+    */
+
+    int dThetaIndex =0;
     for (size_t j = 0; j < boneNum; j++) {
       const auto& bone = *boneList[j];
       // TODO (update rotation)
@@ -180,11 +180,29 @@ void inverseKinematics(const Eigen::Vector3f& target, Bone* start, Bone* end, Po
       //   1. You cannot ignore rotation limit of the bone.
 
       // Write your code here.
-      
+      if (bone.dofrx) {
+        posture.eulerAngle[bone.idx][0] += step * dTheta[dThetaIndex];
+        dThetaIndex++;
+      } else {
+        dThetaIndex++;
+      }
+
+      if (bone.dofry) {
+        posture.eulerAngle[bone.idx][1] += step * dTheta[dThetaIndex];
+        dThetaIndex++;
+      } else {
+        dThetaIndex++;
+      }
+      if (bone.dofrz) {
+        posture.eulerAngle[bone.idx][2] += step * dTheta[dThetaIndex];
+        dThetaIndex++;
+      } else {
+        dThetaIndex++;
+      }
       posture.rotations[bone.idx] = Eigen::AngleAxisf(posture.eulerAngle[bone.idx][2], Eigen::Vector3f::UnitZ()) *
                                     Eigen::AngleAxisf(posture.eulerAngle[bone.idx][1], Eigen::Vector3f::UnitY()) *
                                     Eigen::AngleAxisf(posture.eulerAngle[bone.idx][0], Eigen::Vector3f::UnitX());
     }
-    
+    std::cout << "A round update is done: " << dThetaIndex << "\n";
   }
 }
