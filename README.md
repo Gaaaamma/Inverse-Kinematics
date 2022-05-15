@@ -1,11 +1,19 @@
 # NYCU CA2022 Homework 3
 
+## Result Overview
+<img width="935" alt="截圖 2022-05-15 下午2 01 29" src="https://user-images.githubusercontent.com/84212529/168463871-38d00178-4d54-4617-bd30-64a521b4f53d.png">
+
+<img width="934" alt="截圖 2022-05-15 下午2 57 30" src="https://user-images.githubusercontent.com/84212529/168463827-164426da-5ddf-401f-996e-62c0e5e1228c.png">
+
+<img width="935" alt="截圖 2022-05-15 下午2 58 25" src="https://user-images.githubusercontent.com/84212529/168463830-4ffe56cb-3cc4-4fc5-9842-195b364e3b2a.png">
+
 ## Dependencies
 
 - [Eigen](https://eigen.tuxfamily.org)
 - [glfw](https://github.com/glfw/glfw)
 - [glad](https://github.com/Dav1dde/glad)
 - [Dear ImGui](https://github.com/ocornut/imgui)
+
 
 ### Dependencies for Windows
 
